@@ -97,7 +97,7 @@ async def create_lsp_workspace(
     workspace_path: str,
     name: str = None,
     language: str = "python",
-    _ctx: AgentCtx = None
+    _ctx: Optional[AgentCtx] = None
 ) -> str:
     """创建新的 LSP 工作区
     
@@ -167,7 +167,7 @@ async def create_lsp_workspace(
 
 
 @plugin.mount_sandbox_method(SandboxMethodType.TOOL, "get_lsp_workspaces")
-async def get_lsp_workspaces(_ctx: AgentCtx = None) -> str:
+async def get_lsp_workspaces(_ctx: Optional[AgentCtx] = None) -> str:
     """获取所有 LSP 工作区信息
     
     Returns:
@@ -206,7 +206,7 @@ async def get_lsp_diagnostics(
     workspace_id: str,
     severity_filter: str = None,
     max_results: int = None,
-    _ctx: AgentCtx = None
+    _ctx: Optional[AgentCtx] = None
 ) -> str:
     """获取工作区的代码诊断信息
     
@@ -304,7 +304,7 @@ async def find_lsp_symbol(
     workspace_id: str,
     symbol_name: str,
     symbol_kind: str = None,
-    _ctx: AgentCtx = None
+    _ctx: Optional[AgentCtx] = None
 ) -> str:
     """在工作区中查找代码符号
     
@@ -387,7 +387,7 @@ async def get_lsp_references(
     file_path: str,
     line: int,
     character: int,
-    _ctx: AgentCtx = None
+    _ctx: Optional[AgentCtx] = None
 ) -> str:
     """获取符号的所有引用位置
     
@@ -447,7 +447,7 @@ async def get_lsp_definition(
     file_path: str,
     line: int,
     character: int,
-    _ctx: AgentCtx = None
+    _ctx: Optional[AgentCtx] = None
 ) -> str:
     """获取符号的定义位置
     
@@ -503,7 +503,7 @@ async def get_lsp_definition(
 async def lsp_code_analysis(
     workspace_id: str,
     analysis_type: str = "comprehensive",
-    _ctx: AgentCtx = None
+    _ctx: Optional[AgentCtx] = None
 ) -> str:
     """对工作区进行综合代码分析
     
@@ -619,7 +619,7 @@ async def lsp_code_analysis(
 @plugin.mount_sandbox_method(SandboxMethodType.BEHAVIOR, "analyze_lsp_workspace")
 async def analyze_lsp_workspace(
     workspace_id: str,
-    _ctx: AgentCtx = None
+    _ctx: Optional[AgentCtx] = None
 ) -> str:
     """分析 LSP 工作区（后台任务）
     
