@@ -50,3 +50,23 @@ async def cleanup_adapters(_app: FastAPI):
 
 def get_adapter(adapter_key: str) -> BaseAdapter:
     return loaded_adapters[adapter_key]
+
+
+# Import Serena tool adapter framework
+try:
+    from .serena_tool_adapter import (
+        SerenaToolAdapter, 
+        SerenaToolRegistry,
+        create_nekro_plugin_from_serena_tools,
+        serena_tool_registry
+    )
+    
+    __all__ = [
+        "SerenaToolAdapter",
+        "SerenaToolRegistry", 
+        "create_nekro_plugin_from_serena_tools",
+        "serena_tool_registry",
+    ]
+except ImportError:
+    # Serena tool adapter not available
+    pass

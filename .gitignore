@@ -183,3 +183,6 @@ static
 
 # local
 **.local.md
+
+# Serena submodule (external dependency)
+serena/
