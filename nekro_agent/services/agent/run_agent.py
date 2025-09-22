@@ -4,7 +4,7 @@ import os
 import time
 from collections import deque
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 
 import weave
 
@@ -22,6 +22,7 @@ from nekro_agent.services.sandbox.runner import limited_run_code
 from ..config_resolver import config_resolver
 from .creator import OpenAIChatMessage
 from .openai import OpenAIResponse, gen_openai_chat_response
+from .zai import ZAIResponse, gen_zai_chat_response
 from .resolver import ParsedCodeRunData, parse_chat_response
 from .templates.base import env as default_env
 from .templates.history import HistoryFirstStart, render_history_data
@@ -271,7 +272,7 @@ async def send_agent_request(
     config: CoreConfig,
     is_debug_iteration: bool = False,
     chat_key: str = "",
-) -> Tuple[OpenAIResponse, ModelConfigGroup]:
+) -> Tuple[Union[OpenAIResponse, ZAIResponse], ModelConfigGroup]:
     model_group: ModelConfigGroup = (
         config.MODEL_GROUPS[config.DEBUG_MIGRATION_MODEL_GROUP]
         if is_debug_iteration and config.DEBUG_MIGRATION_MODEL_GROUP
@@ -295,17 +296,32 @@ async def send_agent_request(
         use_model_group: ModelConfigGroup = model_group if i < config.AI_CHAT_LLM_API_MAX_RETRIES - 1 else fallback_model_group
 
         try:
-            llm_response: OpenAIResponse = await gen_openai_chat_response(
-                model=use_model_group.CHAT_MODEL,
-                messages=messages,
-                base_url=use_model_group.BASE_URL,
-                api_key=use_model_group.API_KEY,
-                stream_mode=config.AI_REQUEST_STREAM_MODE,
-                proxy_url=use_model_group.CHAT_PROXY,
-                max_wait_time=config.AI_GENERATE_TIMEOUT,
-                log_path=log_path,
-                error_log_path=err_log_path,
-            )
+            # 根据模型提供商选择相应的API
+            if use_model_group.PROVIDER == "zai":
+                llm_response: ZAIResponse = await gen_zai_chat_response(
+                    model=use_model_group.CHAT_MODEL,
+                    messages=messages,
+                    base_url=use_model_group.BASE_URL,
+                    api_key=use_model_group.API_KEY,
+                    stream_mode=config.AI_REQUEST_STREAM_MODE,
+                    max_wait_time=config.AI_GENERATE_TIMEOUT,
+                    enable_thinking=use_model_group.ENABLE_COT,
+                    log_path=log_path,
+                    error_log_path=err_log_path,
+                )
+            else:
+                # 默认使用 OpenAI API
+                llm_response: OpenAIResponse = await gen_openai_chat_response(
+                    model=use_model_group.CHAT_MODEL,
+                    messages=messages,
+                    base_url=use_model_group.BASE_URL,
+                    api_key=use_model_group.API_KEY,
+                    stream_mode=config.AI_REQUEST_STREAM_MODE,
+                    proxy_url=use_model_group.CHAT_PROXY,
+                    max_wait_time=config.AI_GENERATE_TIMEOUT,
+                    log_path=log_path,
+                    error_log_path=err_log_path,
+                )
         except Exception as e:
             logger.error(
                 f"LLM 请求失败: {e} ｜ 使用模型: {use_model_group.CHAT_MODEL} {'(fallback)' if i == config.AI_CHAT_LLM_API_MAX_RETRIES - 1 else ''}",
