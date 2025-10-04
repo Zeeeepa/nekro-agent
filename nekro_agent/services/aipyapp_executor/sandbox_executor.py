@@ -15,7 +15,8 @@ from .bridge import AipyappBridge
 
 # Lazy import to avoid hard dependency
 try:
-    from aipyapp.aipy import Task, TaskManager, ConfigManager
+    from aipyapp.aipy import Task, TaskManager
+    from aipyapp.aipy.config import ConfigManager
     AIPYAPP_AVAILABLE = True
 except ImportError:
     AIPYAPP_AVAILABLE = False
@@ -66,8 +67,8 @@ class AipyappSandboxExecutor:
         self.max_memory_mb = max_memory_mb
         self.bridge = AipyappBridge()
         
-        # Task manager will be initialized per session
-        self._task_managers: Dict[str, Any] = {}
+        # Task managers per session
+        self._task_managers: Dict[str, TaskManager] = {}
         
         logger.info(
             "AipyappSandboxExecutor initialized",
@@ -124,7 +125,7 @@ class AipyappSandboxExecutor:
             error_info = self.bridge.map_error(e)
             raise AipyappExecutionError(error_info["error_message"]) from e
     
-    async def _get_task_manager(self, ctx: AgentCtx) -> Any:
+    async def _get_task_manager(self, ctx: AgentCtx) -> TaskManager:
         """Get or create TaskManager for session
         
         Args:
@@ -140,10 +141,10 @@ class AipyappSandboxExecutor:
             session_workdir = self.workdir / session_id
             session_workdir.mkdir(parents=True, exist_ok=True)
             
-            # Initialize aipyapp TaskManager
-            # Note: This is a simplified initialization
-            # Real implementation would need proper ConfigManager setup
+            # Initialize aipyapp ConfigManager
             config_manager = ConfigManager(str(session_workdir))
+            
+            # Initialize aipyapp TaskManager
             task_manager = TaskManager(
                 cwd=session_workdir,
                 settings=config_manager.get_config(),
@@ -156,7 +157,7 @@ class AipyappSandboxExecutor:
     
     async def _execute_in_aipyapp(
         self,
-        task_manager: Any,
+        task_manager: TaskManager,
         instruction: str,
         context: Dict[str, Any],
     ) -> Dict[str, Any]:
@@ -168,26 +169,69 @@ class AipyappSandboxExecutor:
             context: Execution context
             
         Returns:
-            Raw result from aipyapp
+            Raw result from aipyapp with success, output, artifacts, etc.
         """
-        # Create aipyapp Task
-        task = Task(task_manager)
+        import time
+        start_time = time.time()
         
-        # This is a simplified execution flow
-        # Real implementation would:
-        # 1. Create Step with instruction
-        # 2. Execute via task.run()
-        # 3. Collect results and artifacts
-        
-        # For now, return a placeholder structure
-        # TODO: Implement full aipyapp execution flow
-        return {
-            "success": True,
-            "output": "Execution via aipyapp (implementation pending)",
-            "artifacts": [],
-            "execution_time": 0,
-            "variables": {},
-        }
+        try:
+            # Create aipyapp Task
+            task = Task(task_manager)
+            
+            # Execute the task with the instruction
+            # aipyapp's Task.run() method handles the execution
+            await asyncio.get_event_loop().run_in_executor(
+                None,
+                task.run,
+                instruction
+            )
+            
+            # Collect results
+            output_lines = []
+            for step in task.steps:
+                # Collect output from each step
+                for round_data in step.data.rounds:
+                    if round_data.llm_response and round_data.llm_response.message:
+                        output_lines.append(round_data.llm_response.message.content)
+            
+            # Collect artifacts (files generated)
+            artifacts = []
+            task_dir = task.cwd
+            if task_dir.exists():
+                for file_path in task_dir.rglob("*"):
+                    if file_path.is_file() and file_path.suffix in {".png", ".jpg", ".csv", ".json", ".txt"}:
+                        artifacts.append(str(file_path.relative_to(task_dir)))
+            
+            # Collect variables from task context
+            variables = {}
+            if hasattr(task, 'runtime') and hasattr(task.runtime, 'globals'):
+                # Extract serializable variables
+                for key, value in task.runtime.globals.items():
+                    if not key.startswith('_') and isinstance(value, (int, float, str, bool, list, dict)):
+                        variables[key] = value
+            
+            execution_time = time.time() - start_time
+            
+            return {
+                "success": True,
+                "output": "\n".join(output_lines) if output_lines else "Task completed successfully",
+                "artifacts": artifacts,
+                "execution_time": execution_time,
+                "variables": variables,
+            }
+            
+        except Exception as e:
+            execution_time = time.time() - start_time
+            logger.exception("aipyapp task execution failed", instruction=instruction)
+            
+            return {
+                "success": False,
+                "output": "",
+                "error": str(e),
+                "artifacts": [],
+                "execution_time": execution_time,
+                "variables": {},
+            }
     
     async def cleanup_session(self, ctx: AgentCtx):
         """Clean up aipyapp resources for a session
@@ -199,7 +243,10 @@ class AipyappSandboxExecutor:
         
         if session_id in self._task_managers:
             task_manager = self._task_managers.pop(session_id)
-            # Perform cleanup
-            # TODO: Implement proper aipyapp cleanup
+            
+            # Call aipyapp's cleanup if available
+            if hasattr(task_manager, 'cleanup'):
+                task_manager.cleanup()
+            
             logger.info("Cleaned up TaskManager for session", session_id=session_id)
 
