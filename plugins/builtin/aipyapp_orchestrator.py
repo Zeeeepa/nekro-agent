@@ -35,11 +35,21 @@ from nekro_agent.schemas.agent_ctx import AgentCtx
 from nekro_agent.services.plugin import (
     NekroPlugin,
     SandboxMethodType,
-    plugin,
 )
 from nekro_agent.services.aipyapp_executor import (
     AipyappSandboxExecutor,
     AipyappTaskManager,
+)
+
+# Create plugin instance
+plugin = NekroPlugin(
+    name="aipyapp Orchestrator",
+    module_name="aipyapp_orchestrator",
+    description="Python execution engine powered by aipyapp for sandboxed code execution",
+    version="1.0.0",
+    author="nekro-agent",
+    url="https://github.com/Zeeeepa/nekro-agent",
+    support_adapter=["onebot_v11", "minecraft", "sse", "discord"],
 )
 
 
@@ -357,4 +367,3 @@ class AipyappOrchestratorPlugin(NekroPlugin):
 
 # Register the plugin
 aipyapp_plugin = AipyappOrchestratorPlugin()
-
