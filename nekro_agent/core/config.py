@@ -23,6 +23,11 @@ class ModelConfigGroup(ConfigBase):
     CHAT_PROXY: str = Field(default="", title="聊天模型访问代理")
     BASE_URL: str = Field(default="", title="聊天模型 API 地址")
     API_KEY: str = Field(default="", title="聊天模型 API 密钥")
+    PROVIDER: Literal["openai", "zai"] = Field(
+        default="openai",
+        title="模型提供商",
+        description="模型提供商，可以是 openai 或 zai",
+    )
     MODEL_TYPE: Literal["chat", "embedding", "draw"] = Field(
         default="chat",
         title="模型类型",
@@ -114,6 +119,17 @@ class CoreConfig(ConfigBase):
                 CHAT_PROXY="",
                 BASE_URL="https://api.nekro.ai/v1",
                 API_KEY="",
+                PROVIDER="openai",
+                MODEL_TYPE="chat",
+                ENABLE_VISION=True,
+                ENABLE_COT=True,
+            ),
+            "zai": ModelConfigGroup(
+                CHAT_MODEL="glm-4.5v",
+                CHAT_PROXY="",
+                BASE_URL="https://chat.z.ai",
+                API_KEY="",
+                PROVIDER="zai",
                 MODEL_TYPE="chat",
                 ENABLE_VISION=True,
                 ENABLE_COT=True,
@@ -123,6 +139,7 @@ class CoreConfig(ConfigBase):
                 CHAT_PROXY="",
                 BASE_URL="https://api.nekro.ai/v1",
                 API_KEY="",
+                PROVIDER="openai",
                 MODEL_TYPE="draw",
                 ENABLE_VISION=False,
                 ENABLE_COT=False,
@@ -132,6 +149,7 @@ class CoreConfig(ConfigBase):
                 CHAT_PROXY="",
                 BASE_URL="https://api.nekro.ai/v1",
                 API_KEY="",
+                PROVIDER="openai",
                 MODEL_TYPE="draw",
                 ENABLE_VISION=False,
                 ENABLE_COT=False,
@@ -141,6 +159,7 @@ class CoreConfig(ConfigBase):
                 CHAT_PROXY="",
                 BASE_URL="https://api.nekro.ai/v1",
                 API_KEY="",
+                PROVIDER="openai",
                 MODEL_TYPE="embedding",
                 ENABLE_VISION=False,
                 ENABLE_COT=False,
